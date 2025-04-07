@@ -17,7 +17,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-model = load_model("modelo_classificador_rg.h5")
+model = load_model("novo_modelo.h5")
 
 @app.route("/classificarDocumentos", methods=["POST"])
 def classify():
@@ -46,13 +46,20 @@ def classify():
     noBgPredictions = dict()
 
     for file in filesPrediction:
+        backgroundPredictions = [ predictImage(imgRoi, model) for imgRois in bgMapping[file] for imgRoi in imgRois ]
+        noBackgroundPredictions = [ predictImage(imgRoi, model) for imgRois in noBgMapping[file] for imgRoi in imgRois ]
+        
+        bgPredictions[file] = False
+        noBgPredictions[file] = False
 
-        bgPredictions[file] = all([ predictImage(imgRoi, model) for imgRois in bgMapping[file] for imgRoi in imgRois ])
-        noBgPredictions[file] = all([ predictImage(imgRoi, model) for imgRois in noBgMapping[file] for imgRoi in imgRois ])
+        if backgroundPredictions:
+            bgPredictions[file] = all(backgroundPredictions)
+        if noBackgroundPredictions:
+            noBgPredictions[file] = all(noBackgroundPredictions)
 
         filesPrediction[file] = bgPredictions[file] or noBgPredictions[file]
     
     return jsonify(filesPrediction)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=9022)
+    app.run(debug=True, host="0.0.0.0", port=9022)
